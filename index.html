@@ -12,7 +12,6 @@
     <!-- TailwindCSS -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2/dist/tailwind.min.css" rel="stylesheet">
     <script>
-        // Fallback caso o CDN falhe
         window.addEventListener('error', function (e) {
             if (e.target.tagName === 'LINK' && e.target.href.includes('tailwindcss')) {
                 const link = document.createElement('link');
@@ -50,7 +49,8 @@
             margin: 10px 0;
         }
 
-        .select {
+        .select,
+        .input-number {
             width: 100%;
             padding: 8px;
             border: 1px solid #e2e8f0;
@@ -74,15 +74,14 @@
     <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 
-    <!-- Aplicação -->
     <script>
-        // Aguarda o carregamento do DOM e do React
         window.addEventListener('load', function () {
             const { useState, useEffect } = React;
 
             function StoryPointsCalculator() {
                 const [hoursPerWeek, setHoursPerWeek] = useState(20);
                 const [experienceLevel, setExperienceLevel] = useState('intermediate');
+                const [efficiency, setEfficiency] = useState(80);
                 const [results, setResults] = useState({
                     effectiveHours: 0,
                     maxStoryPoints: 0,
@@ -105,41 +104,17 @@
                 };
 
                 const calculateStoryPoints = () => {
-                    const effectiveHours = hoursPerWeek * 0.8;
+                    const effectiveHours = hoursPerWeek * (efficiency / 100);
                     const adjustedHours = effectiveHours * efficiencyMultipliers[experienceLevel];
 
                     let distribution = [];
                     let remainingHours = adjustedHours;
 
-                    if (remainingHours >= 26) {
-                        const thirteens = Math.floor(remainingHours / 26);
-                        if (thirteens > 0) {
-                            distribution.push({ points: 13, count: thirteens });
-                            remainingHours -= thirteens * 26;
-                        }
-                    }
-
-                    if (remainingHours >= 16) {
-                        const eights = Math.floor(remainingHours / 16);
-                        if (eights > 0) {
-                            distribution.push({ points: 8, count: eights });
-                            remainingHours -= eights * 16;
-                        }
-                    }
-
-                    if (remainingHours >= 6) {
-                        const threes = Math.floor(remainingHours / 6);
-                        if (threes > 0) {
-                            distribution.push({ points: 3, count: threes });
-                            remainingHours -= threes * 6;
-                        }
-                    }
-
-                    if (remainingHours >= 2) {
-                        const ones = Math.floor(remainingHours / 2);
-                        if (ones > 0) {
-                            distribution.push({ points: 1, count: ones });
-                            remainingHours -= ones * 2;
+                    for (const [points, time] of Object.entries(storyPointReference).reverse()) {
+                        const count = Math.floor(remainingHours / time);
+                        if (count > 0) {
+                            distribution.push({ points: parseInt(points), count });
+                            remainingHours -= count * time;
                         }
                     }
 
@@ -154,29 +129,45 @@
 
                 useEffect(() => {
                     calculateStoryPoints();
-                }, [hoursPerWeek, experienceLevel]);
+                }, [hoursPerWeek, experienceLevel, efficiency]);
 
                 return React.createElement('div', { className: 'app-container' },
                     React.createElement('div', { className: 'card' },
                         React.createElement('h1', { className: 'text-2xl font-bold mb-4' }, 'Story Points Calculator'),
+
+                        React.createElement('div', {
+                            className: 'bg-blue-50 text-sm text-gray-700 border border-blue-200 rounded-md p-4 mb-4'
+                        },
+                            React.createElement('p', { className: 'mb-2' }, 'Esta ferramenta ajuda freelancers e equipes autogerenciadas a estimar o número máximo de Story Points que um desenvolvedor pode assumir por semana.'),
+                            React.createElement('ul', { className: 'list-disc pl-5 space-y-1' }, [
+                                React.createElement('li', { key: 1 }, 'Ajuste o número de horas disponíveis por semana.'),
+                                React.createElement('li', { key: 2 }, 'Escolha o nível de experiência do desenvolvedor.'),
+                                React.createElement('li', { key: 3 }, 'Ajuste a eficiência (% do tempo efetivamente produtivo).'),
+                                React.createElement('li', { key: 4 }, 'Veja a estimativa de pontos possíveis com uma distribuição recomendada.')
+                            ])
+                        ),
+
                         React.createElement('div', { className: 'space-y-4' },
-                            React.createElement('div',
-                                null,
+                            React.createElement('div', null,
                                 React.createElement('label', { className: 'block text-sm font-medium mb-1' }, 'Horas por Semana'),
                                 React.createElement('input', {
-                                    type: 'range',
-                                    min: '4',
-                                    max: '40',
-                                    value: hoursPerWeek,
+                                    type: 'range', min: '4', max: '40', value: hoursPerWeek,
                                     onChange: (e) => setHoursPerWeek(parseInt(e.target.value)),
                                     className: 'input-range'
                                 }),
-                                React.createElement('div', { className: 'text-sm text-gray-500' },
-                                    `${hoursPerWeek} horas`
-                                )
+                                React.createElement('div', { className: 'text-sm text-gray-500' }, `${hoursPerWeek} horas`)
                             ),
-                            React.createElement('div',
-                                null,
+
+                            React.createElement('div', null,
+                                React.createElement('label', { className: 'block text-sm font-medium mb-1' }, 'Eficiência (%)'),
+                                React.createElement('input', {
+                                    type: 'number', min: '10', max: '100', step: '1', value: efficiency,
+                                    onChange: (e) => setEfficiency(parseInt(e.target.value)),
+                                    className: 'input-number'
+                                })
+                            ),
+
+                            React.createElement('div', null,
                                 React.createElement('label', { className: 'block text-sm font-medium mb-1' }, 'Nível de Experiência'),
                                 React.createElement('select', {
                                     value: experienceLevel,
@@ -188,6 +179,7 @@
                                     React.createElement('option', { value: 'senior' }, 'Senior')
                                 )
                             ),
+
                             React.createElement('div', { className: 'results' },
                                 React.createElement('h2', { className: 'text-lg font-semibold mb-3' }, 'Resultados'),
                                 React.createElement('div', { className: 'space-y-2' },
@@ -196,9 +188,7 @@
                                     React.createElement('div', { className: 'mt-4' },
                                         React.createElement('p', { className: 'font-medium mb-2' }, 'Distribuição Recomendada:'),
                                         results.recommendedDistribution.map((item, index) =>
-                                            React.createElement('p', { key: index },
-                                                `${item.count}x tarefas de ${item.points} pontos`
-                                            )
+                                            React.createElement('p', { key: index }, `${item.count}x tarefas de ${item.points} pontos`)
                                         )
                                     )
                                 )
@@ -208,7 +198,6 @@
                 );
             }
 
-            // Renderiza o app
             const root = ReactDOM.createRoot(document.getElementById('root'));
             root.render(React.createElement(StoryPointsCalculator));
         });
